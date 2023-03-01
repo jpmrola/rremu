@@ -1,0 +1,23 @@
+#ifndef BASE_DEVICE_H
+#define BASE_DEVICE_H
+
+#include <cstdint>
+#include <vector>
+#include <algorithm>
+
+class BaseDevice
+{
+  public:
+
+    BaseDevice() = default;
+    virtual ~BaseDevice() = default;
+
+    virtual void Load(uint64_t addr, int size, uint64_t& data) = 0;
+    virtual void Store(uint64_t addr, int size, uint64_t data) = 0;
+
+    virtual constexpr uint64_t get_base_addr() = 0;
+    virtual constexpr uint64_t get_size() = 0;
+
+};
+
+#endif
