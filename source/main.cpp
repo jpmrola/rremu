@@ -46,6 +46,11 @@ int main(int argc, char** argv)
     std::cerr << "Binary too large" << std::endl;
     return -1;
   }
+  else if(binary->empty() == true)
+  {
+    std::cerr << "Failure while reading or binary empty" << std::endl;
+    return -1;
+  }
 
   DeviceFactory factory;
   auto cpu = factory.create_devices(binary, option);
