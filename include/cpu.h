@@ -72,7 +72,7 @@ class CPU
 
     CPU(const std::shared_ptr<std::vector<uint8_t>> binary) : mmu(MMU(binary))
     {
-      mode = PrivilegeMode::MACHINE;
+      priv_mode = PrivilegeMode::MACHINE;
       pc = KERNBASE;
     }
 
@@ -87,11 +87,11 @@ class CPU
     inline void Store(uint64_t addr, int size, uint64_t data) { mmu.Store(addr, size, data); }
     inline void Load(uint64_t addr, int size, uint64_t& data) { mmu.Load(addr, size, data); }
 
-    PrivilegeMode GetMode() const { return this->mode; }
-    void SetMode(PrivilegeMode mode) { this->mode = mode; }
+    PrivilegeMode GetMode() const { return priv_mode; }
+    void SetMode(PrivilegeMode mode) { priv_mode = mode; }
 
     uint64_t GetPc() const { return pc; }
-    void SetPc(uint64_t pc) { this->pc = pc; }
+    void SetPc(uint64_t addr) { pc = addr; }
 
     uint64_t GetReg(int reg) const { return regs[reg]; }
     void SetReg(int reg, uint64_t val) { regs[reg] = val; }
@@ -118,7 +118,7 @@ class CPU
     uint64_t pc;
     std::array<uint64_t, N_REG> regs {0};
     std::array<uint64_t, N_CSR> csrs {0};
-    PrivilegeMode mode;
+    PrivilegeMode priv_mode;
     const uint64_t& reg_zero = regs[0];
     MMU mmu;
 };

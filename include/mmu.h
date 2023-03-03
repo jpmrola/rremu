@@ -73,9 +73,9 @@ class MMU
     uint64_t Translate(uint64_t virtual_addr);
     Sv39PageTableEntry ParsePageTableEntry(uint64_t pte);
 
-    void SetPagingMode(PagingMode mode) { this->paging_mode = mode; }
-    void SetRootPageTable(uint64_t root_page_table) { this->root_page_table = root_page_table; }
-    void SetPrivilegeMode(PrivilegeMode mode) { this->privilege_mode = mode; }
+    void SetPagingMode(PagingMode mode) { paging_mode = mode; }
+    void SetRootPageTable(uint64_t page_table) { root_page_table = page_table; }
+    void SetPrivilegeMode(PrivilegeMode mode) { privilege_mode = mode; }
 
   private:
 
