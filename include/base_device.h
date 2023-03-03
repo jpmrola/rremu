@@ -2,8 +2,6 @@
 #define BASE_DEVICE_H
 
 #include <cstdint>
-#include <vector>
-#include <algorithm>
 
 class BaseDevice
 {

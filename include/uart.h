@@ -1,3 +1,6 @@
+#ifndef UART_H
+#define UART_H
+
 #include "base_device.h"
 
 template <uint64_t base_addr_mem, uint64_t size_mem>
@@ -19,3 +22,5 @@ class UART : public BaseDevice
     static constexpr uint64_t size = size_mem;
 
 };
+
+#endif

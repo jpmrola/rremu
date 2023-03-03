@@ -6,15 +6,40 @@ void MMU::Load(uint64_t addr, int size, uint64_t& data)
   try
   {
     uint64_t physical_addr = Translate(addr);
-    for(const auto& device : devices)
+    if(physical_addr >= ram.get_base_addr() && physical_addr < (ram.get_base_addr() + ram.get_size()))
     {
-      if((physical_addr >= device->get_base_addr()) && (physical_addr < (device->get_base_addr() + device->get_size())))
+      ram.Load(physical_addr, size, data);
+      return;
+    }
+    else
+    {
+      if(physical_addr >= uart.get_base_addr() && physical_addr < (uart.get_base_addr() + uart.get_size()))
       {
-        device->Load(physical_addr, size, data);
+        uart.Load(physical_addr, size, data);
         return;
       }
-    }
+      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      {
+        virtio.Load(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= clint.get_base_addr() && physical_addr < (clint.get_base_addr() + clint.get_size()))
+      {
+        clint.Load(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= plic.get_base_addr() && physical_addr < (plic.get_base_addr() + plic.get_size()))
+      {
+        plic.Load(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      {
+        virtio.Load(physical_addr, size, data);
+        return;
+      }
     throw std::runtime_error("MMU Load: No device found");
+    }
   }
   catch(const std::exception& e)
   {
@@ -29,11 +54,36 @@ void MMU::Store(uint64_t addr, int size, uint64_t data)
   try
   {
     uint64_t physical_addr = Translate(addr);
-    for(const auto& device : devices)
+    if(physical_addr >= ram.get_base_addr() && physical_addr < (ram.get_base_addr() + ram.get_size()))
     {
-      if((physical_addr >= device->get_base_addr()) && (physical_addr < (device->get_base_addr() + device->get_size())))
+      ram.Store(physical_addr, size, data);
+      return;
+    }
+    else
+    {
+      if(physical_addr >= uart.get_base_addr() && physical_addr < (uart.get_base_addr() + uart.get_size()))
       {
-        device->Store(physical_addr, size, data);
+        uart.Store(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      {
+        virtio.Store(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= clint.get_base_addr() && physical_addr < (clint.get_base_addr() + clint.get_size()))
+      {
+        clint.Store(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= plic.get_base_addr() && physical_addr < (plic.get_base_addr() + plic.get_size()))
+      {
+        plic.Store(physical_addr, size, data);
+        return;
+      }
+      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      {
+        virtio.Store(physical_addr, size, data);
         return;
       }
     }
@@ -93,7 +143,7 @@ uint64_t MMU::Translate(uint64_t virtual_addr)
       int i = levels - 1;
 
       uint64_t a = root_page_table * page_size;
-      uint64_t pte_raw;
+      uint64_t pte_raw = 0;
       Sv39PageTableEntry pte;
 
       for(; i >= 0; i--)

@@ -1,3 +1,6 @@
+#ifndef CLINT_H
+#define CLINT_H
+
 #include <base_device.h>
 
 template <uint64_t base_addr_mem, uint64_t size_mem>
@@ -19,3 +22,5 @@ class CLINT : public BaseDevice
     static constexpr uint64_t size = size_mem;
 
 };
+
+#endif

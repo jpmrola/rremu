@@ -1,3 +1,6 @@
+#ifndef RAM_H
+#define RAM_H
+
 #include <cstdint>
 #include <array>
 #include <memory>
@@ -73,3 +76,5 @@ void RAM<base_addr_mem, size_mem>::Store(uint64_t addr, int size, uint64_t data)
     }
   }
 }
+
+#endif

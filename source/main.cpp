@@ -1,5 +1,5 @@
-#include "device_factory.h"
 #include "config.h"
+#include "cpu.h"
 #include "elf_parser.h"
 #include <iostream>
 #include <fstream>
@@ -38,7 +38,15 @@ int main(int argc, char** argv)
   {
     return -1;
   }
-
+  else if(option == 0)
+  {
+    std::cout << "XV6 mode not implemented" << std::endl;
+    return -1;
+  }
+  else if(option == 1)
+  {
+    std::cout << "ELF mode" << std::endl;
+  }
   uint64_t entry_point;
   auto binary = std::make_shared<std::vector<uint8_t>>(LoadELF64(argv[2], entry_point));
   if(static_cast<uint64_t>(binary->size()) > MEMORY_SIZE)
@@ -52,8 +60,7 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  DeviceFactory factory;
-  auto cpu = factory.create_devices(binary, option);
+  auto cpu = std::make_unique<CPU>(binary);
   if(cpu == nullptr)
   {
     return -1;

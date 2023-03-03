@@ -70,7 +70,7 @@ class CPU
 {
   public:
 
-    CPU(std::unique_ptr<MMU> mmu) : mmu(std::move(mmu))
+    CPU(const std::shared_ptr<std::vector<uint8_t>> binary) : mmu(MMU(binary))
     {
       mode = PrivilegeMode::MACHINE;
       pc = KERNBASE;
@@ -84,8 +84,8 @@ class CPU
 
     void UpdatePagingMode(uint64_t satp);
 
-    void Store(uint64_t addr, int size, uint64_t data) { mmu->Store(addr, size, data); }
-    void Load(uint64_t addr, int size, uint64_t& data) { mmu->Load(addr, size, data); }
+    inline void Store(uint64_t addr, int size, uint64_t data) { mmu.Store(addr, size, data); }
+    inline void Load(uint64_t addr, int size, uint64_t& data) { mmu.Load(addr, size, data); }
 
     PrivilegeMode GetMode() const { return this->mode; }
     void SetMode(PrivilegeMode mode) { this->mode = mode; }
@@ -114,13 +114,13 @@ class CPU
 
   private:
 
-    std::unique_ptr<MMU> mmu;
     const uint64_t xlen = 64;  // hardcoded 64-bit
     uint64_t pc;
     std::array<uint64_t, N_REG> regs {0};
     std::array<uint64_t, N_CSR> csrs {0};
     PrivilegeMode mode;
     const uint64_t& reg_zero = regs[0];
+    MMU mmu;
 };
 
 typedef struct Instruction

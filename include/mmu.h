@@ -5,8 +5,12 @@
 #include <vector>
 #include <array>
 #include <memory>
-#include "base_device.h"
 #include "config.h"
+#include "ram.h"
+#include "uart.h"
+#include "virtio.h"
+#include "clint.h"
+#include "plic.h"
 
 typedef enum AccessType
 {
@@ -57,7 +61,11 @@ class MMU
 {
   public:
 
-    MMU() : paging_mode(PagingMode::Bare), privilege_mode(PrivilegeMode::MACHINE), page_size(PAGE_SIZE) {}
+    MMU(const std::shared_ptr<std::vector<uint8_t>>& binary) :
+    paging_mode(PagingMode::Bare),
+    privilege_mode(PrivilegeMode::MACHINE),
+    page_size(PAGE_SIZE),
+    ram(RAM<KERNBASE, MEMORY_SIZE>(binary)) {}
 
     void Load(uint64_t addr, int size, uint64_t& data);
     void Store(uint64_t addr, int size, uint64_t data);
@@ -69,18 +77,18 @@ class MMU
     void SetRootPageTable(uint64_t root_page_table) { this->root_page_table = root_page_table; }
     void SetPrivilegeMode(PrivilegeMode mode) { this->privilege_mode = mode; }
 
-    void add_device(std::unique_ptr<BaseDevice> device)
-    {
-      devices.push_back(std::move(device));
-    }
-
   private:
 
-    std::vector<std::unique_ptr<BaseDevice>> devices;
     PagingMode paging_mode;
     PrivilegeMode privilege_mode;
     int page_size;
     uint64_t root_page_table;
+    // Devices
+    RAM<KERNBASE, MEMORY_SIZE> ram;
+    UART<UART_BASE, UART_SIZE> uart;
+    VIRTIO<VIRTIO_BASE, VIRTIO_SIZE> virtio;
+    CLINT<CLINT_BASE, CLINT_SIZE> clint;
+    PLIC<PLIC_BASE, PLIC_SIZE> plic;
 
 };
 
