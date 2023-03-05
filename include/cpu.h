@@ -63,21 +63,16 @@ enum MIP : uint64_t
 };
 
 // Forward declarations for structs used in the CPU class
-template <typename T> struct Instruction;
+typedef struct Instruction Instruction;
 typedef struct InstructionFields InstructionFields;
 
-template<typename T_MMU>
 class CPU
 {
   public:
 
-    CPU(T_MMU& mmu) : mmu(mmu)
-    {
-      priv_mode = PrivilegeMode::MACHINE;
-      pc = KERNBASE;
-    }
+    CPU(std::unique_ptr<BaseMMU> mmu_ptr) : pc(KERNBASE), priv_mode(PrivilegeMode::MACHINE), mmu(std::move(mmu_ptr))  {}
 
-    const Instruction<CPU<T_MMU>>& Decode(uint32_t instruction);
+    const Instruction& Decode(uint32_t instruction);
     int Execute();
     uint32_t Fetch();
     void Run();
@@ -85,8 +80,8 @@ class CPU
 
     void UpdatePagingMode(uint64_t satp);
 
-    inline void Store(uint64_t addr, int size, uint64_t data) { mmu.Store(addr, size, data); }
-    inline void Load(uint64_t addr, int size, uint64_t& data) { mmu.Load(addr, size, data); }
+    inline void Store(uint64_t addr, int size, uint64_t data) { mmu->Store(addr, size, data); }
+    inline void Load(uint64_t addr, int size, uint64_t& data) { mmu->Load(addr, size, data); }
 
     PrivilegeMode GetMode() const { return priv_mode; }
     void SetMode(PrivilegeMode mode) { priv_mode = mode; }
@@ -110,7 +105,7 @@ class CPU
     int RunInstruction(uint32_t instruction_bits); // For testing
     void DumpRegs(); // For testing
     void DumpCsrs(); // For testing
-    void DumpInstruction(const Instruction<CPU<T_MMU>>& instruction); // For testing
+    void DumpInstruction(const Instruction& instruction); // For testing
     void DumpInstructionFields(InstructionFields fields); // For testing
 
   private:
@@ -121,17 +116,16 @@ class CPU
     std::array<uint64_t, N_CSR> csrs {0};
     PrivilegeMode priv_mode;
     const uint64_t& reg_zero = regs[0];
-    T_MMU mmu;
+    std::unique_ptr<BaseMMU> mmu;
 };
 
-template<typename T>
 struct Instruction
 {
   const std::string name;
   const char format;
   const uint32_t mask_field;
   const uint32_t instruction_matcher;
-  void (*const execute)(const uint32_t instruction, T& cpu);
+  void (*const execute)(const uint32_t instruction, CPU& cpu);
 };
 
 typedef struct InstructionFields

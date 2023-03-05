@@ -61,8 +61,8 @@ int main(int argc, char** argv)
   }
 
   auto ram = std::make_unique<RAM<KERNBASE,MEMORY_SIZE>>(binary);
-  auto mmu = std::make_unique<MMU<RAM<KERNBASE, MEMORY_SIZE>>>(*ram);
-  auto cpu = std::make_unique<CPU<MMU<RAM<KERNBASE,MEMORY_SIZE>>>>(*mmu);
+  auto mmu = std::make_unique<MMU<  RAM<KERNBASE,MEMORY_SIZE> >>(*ram);
+  auto cpu = std::make_unique<CPU>(std::move(mmu));
 
   cpu->SetPc(entry_point);
 
