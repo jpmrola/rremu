@@ -6,34 +6,34 @@ void MMU::Load(uint64_t addr, int size, uint64_t& data)
   try
   {
     uint64_t physical_addr = Translate(addr);
-    if(physical_addr >= ram.get_base_addr() && physical_addr < (ram.get_base_addr() + ram.get_size()))
+    if(ram.IsValidAddr(physical_addr))
     {
       ram.Load(physical_addr, size, data);
       return;
     }
     else
     {
-      if(physical_addr >= uart.get_base_addr() && physical_addr < (uart.get_base_addr() + uart.get_size()))
+      if(uart.IsValidAddr(physical_addr))
       {
         uart.Load(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      else if(virtio.IsValidAddr(physical_addr))
       {
         virtio.Load(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= clint.get_base_addr() && physical_addr < (clint.get_base_addr() + clint.get_size()))
+      else if(clint.IsValidAddr(physical_addr))
       {
         clint.Load(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= plic.get_base_addr() && physical_addr < (plic.get_base_addr() + plic.get_size()))
+      else if(plic.IsValidAddr(physical_addr))
       {
         plic.Load(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      else if(virtio.IsValidAddr(physical_addr))
       {
         virtio.Load(physical_addr, size, data);
         return;
@@ -54,34 +54,34 @@ void MMU::Store(uint64_t addr, int size, uint64_t data)
   try
   {
     uint64_t physical_addr = Translate(addr);
-    if(physical_addr >= ram.get_base_addr() && physical_addr < (ram.get_base_addr() + ram.get_size()))
+    if(ram.IsValidAddr(physical_addr))
     {
       ram.Store(physical_addr, size, data);
       return;
     }
     else
     {
-      if(physical_addr >= uart.get_base_addr() && physical_addr < (uart.get_base_addr() + uart.get_size()))
+      if(uart.IsValidAddr(physical_addr))
       {
         uart.Store(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      else if(virtio.IsValidAddr(physical_addr))
       {
         virtio.Store(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= clint.get_base_addr() && physical_addr < (clint.get_base_addr() + clint.get_size()))
+      else if(clint.IsValidAddr(physical_addr))
       {
         clint.Store(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= plic.get_base_addr() && physical_addr < (plic.get_base_addr() + plic.get_size()))
+      else if(plic.IsValidAddr(physical_addr))
       {
         plic.Store(physical_addr, size, data);
         return;
       }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
+      else if(virtio.IsValidAddr(physical_addr))
       {
         virtio.Store(physical_addr, size, data);
         return;

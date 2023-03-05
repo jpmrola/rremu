@@ -21,10 +21,11 @@ class RAM : public BaseDevice
     void Load(uint64_t addr, int size, uint64_t& data) override;
     void Store(uint64_t addr, int size, uint64_t data) override;
 
-    constexpr uint64_t get_base_addr() override { return base_addr; }
-    constexpr uint64_t get_size() override { return size; }
+    constexpr uint64_t GetBaseAddr() override { return base_addr; }
+    constexpr uint64_t GetSize() override { return size; }
+    constexpr bool IsValidAddr(uint64_t addr) override { return addr >= base_addr && addr < base_addr + size; }
 
-    private:
+  private:
 
     std::array<uint8_t, size_mem> mem;
     static constexpr uint64_t base_addr = base_addr_mem;
