@@ -51,21 +51,30 @@ typedef enum
   SUPERVISOR = 0x1,
   RESERVED=0x2,
   MACHINE = 0x3
-  } PrivilegeMode;
+} PrivilegeMode;
 
 // Acts as the MMU and bus for the CPU
 // Connects the devices and maps them in virtual memory
 // Devices are represented as BaseDevice objects
 
+template<typename BaseDevice>
+concept Device = requires(BaseDevice dev, uint64_t addr, int size, uint64_t data)
+{
+  { dev.Load(addr, size, data) } -> std::same_as<void>;
+  { dev.Store(addr, size, data) } -> std::same_as<void>;
+};
+
+template<Device... Devices>
 class MMU
 {
   public:
 
-    MMU(const std::shared_ptr<std::vector<uint8_t>>& binary) :
+    MMU(Devices&... device_list) :
     paging_mode(PagingMode::Bare),
     privilege_mode(PrivilegeMode::MACHINE),
     page_size(PAGE_SIZE),
-    ram(RAM<KERNBASE, MEMORY_SIZE>(binary)) {}
+    devices(device_list...)
+    {}
 
     void Load(uint64_t addr, int size, uint64_t& data);
     void Store(uint64_t addr, int size, uint64_t data);
@@ -84,11 +93,7 @@ class MMU
     int page_size;
     uint64_t root_page_table;
     // Devices
-    RAM<KERNBASE, MEMORY_SIZE> ram;
-    UART<UART_BASE, UART_SIZE> uart;
-    VIRTIO<VIRTIO_BASE, VIRTIO_SIZE> virtio;
-    CLINT<CLINT_BASE, CLINT_SIZE> clint;
-    PLIC<PLIC_BASE, PLIC_SIZE> plic;
+    std::tuple<Devices...> devices;
 
 };
 

@@ -60,11 +60,10 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  auto cpu = std::make_unique<CPU>(binary);
-  if(cpu == nullptr)
-  {
-    return -1;
-  }
+  auto ram = std::make_unique<RAM<KERNBASE,MEMORY_SIZE>>(binary);
+  auto mmu = std::make_unique<MMU<RAM<KERNBASE, MEMORY_SIZE>>>(*ram);
+  auto cpu = std::make_unique<CPU<MMU<RAM<KERNBASE,MEMORY_SIZE>>>>(*mmu);
+
   cpu->SetPc(entry_point);
 
   std::chrono::time_point<std::chrono::system_clock> start, end;

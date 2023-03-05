@@ -13,8 +13,9 @@ class BaseDevice
     virtual void Load(uint64_t addr, int size, uint64_t& data) = 0;
     virtual void Store(uint64_t addr, int size, uint64_t data) = 0;
 
-    virtual constexpr uint64_t get_base_addr() = 0;
-    virtual constexpr uint64_t get_size() = 0;
+    virtual constexpr uint64_t GetBaseAddress() = 0;
+    virtual constexpr uint64_t GetSize() = 0;
+    virtual constexpr bool InRange(uint64_t addr) = 0;
 
 };
 

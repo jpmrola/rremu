@@ -124,8 +124,8 @@ InstructionFields parse_instruction<'J'>(const uint32_t instruction)
                                 | mask_and_shift<12, 19, 12>(instruction) | mask_and_shift<31, 31, 20>(instruction)};
 }
 
-
-const static Instruction instructions[] = {
+template<typename T>
+static const Instruction<T> instruction_list[] = {
   // RV32I
   // INSTRUCTIONS IN RV32I: LUI, AUIPC, JAL, JALR, BEQ, BNE, BLT, BGE, BLTU, BGEU,
   //                        LB, LH, LW, LBU, LHU, SB, SH, SW,
@@ -136,7 +136,7 @@ const static Instruction instructions[] = {
     .format = 'U',
     .mask_field = 0x0000007f,
     .instruction_matcher = 0x00000037,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'U'>(instruction);
       cpu.SetReg(fields.rd, fields.imm);
     }
@@ -146,7 +146,7 @@ const static Instruction instructions[] = {
     .format = 'U',
     .mask_field = 0x0000007f,
     .instruction_matcher = 0x00000017,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'U'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc() + fields.imm);
     }
@@ -156,7 +156,7 @@ const static Instruction instructions[] = {
     .format = 'J',
     .mask_field = 0x0000007f,
     .instruction_matcher = 0x0000006f,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'J'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc());   // PC is incremented by 4 after instruction fetch, no need to add 4
       cpu.SetPc(cpu.GetPc() + sign_extend<int32_t>(fields.imm) - 4);  // -4 because PC is incremented by 4 after instruction fetch
@@ -167,7 +167,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00000067,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc());   // PC is incremented by 4 after instruction fetch, no need to add 4
       cpu.SetPc((cpu.GetReg(fields.rs1) + sign_extend<int32_t>(fields.imm)) & ~1);
@@ -178,7 +178,7 @@ const static Instruction instructions[] = {
     .format = 'B',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00000063,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) == cpu.GetReg(fields.rs2))
       {
@@ -191,7 +191,7 @@ const static Instruction instructions[] = {
     .format = 'B',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00001063,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) != cpu.GetReg(fields.rs2))
       {
@@ -204,7 +204,7 @@ const static Instruction instructions[] = {
     .format = 'B',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00004063,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'B'>(instruction);
       if(sign_extend<int32_t>(cpu.GetReg(fields.rs1)) < sign_extend<int32_t>(cpu.GetReg(fields.rs2)))
       {
@@ -217,7 +217,7 @@ const static Instruction instructions[] = {
     .format = 'B',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00005063,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'B'>(instruction);
       if(sign_extend<int32_t>(cpu.GetReg(fields.rs1)) >= sign_extend<int32_t>(cpu.GetReg(fields.rs2)))
       {
@@ -230,7 +230,7 @@ const static Instruction instructions[] = {
     .format = 'B',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00006063,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) < cpu.GetReg(fields.rs2))
       {
@@ -243,7 +243,7 @@ const static Instruction instructions[] = {
     .format = 'B',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00007063,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) >= cpu.GetReg(fields.rs2))
       {
@@ -256,7 +256,7 @@ const static Instruction instructions[] = {
     .format = 'I',
 		.mask_field = 0x0000707f,
 		.instruction_matcher = 0x00000003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -269,7 +269,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00001003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -282,7 +282,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00002003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -295,7 +295,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00004003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -308,7 +308,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00005003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -321,7 +321,7 @@ const static Instruction instructions[] = {
     .format = 'S',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00000023,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'S'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data = cpu.GetReg(fields.rs2);
@@ -333,7 +333,7 @@ const static Instruction instructions[] = {
     .format = 'S',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00001023,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'S'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data = cpu.GetReg(fields.rs2);
@@ -345,7 +345,7 @@ const static Instruction instructions[] = {
     .format = 'S',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00002023,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'S'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data = cpu.GetReg(fields.rs2);
@@ -358,7 +358,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
   .instruction_matcher = 0x00000013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + fields.imm);
     }
@@ -368,7 +368,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00002013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) < fields.imm);
     }
@@ -378,7 +378,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00003013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) < fields.imm);
     }
@@ -388,7 +388,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00004013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) ^ fields.imm);
     }
@@ -398,7 +398,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00006013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) | fields.imm);
     }
@@ -408,7 +408,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00007013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) & fields.imm);
     }
@@ -418,7 +418,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0xfc00707f,
     .instruction_matcher = 0x00001013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) << fields.imm);
     }
@@ -428,7 +428,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0xfc00707f,
     .instruction_matcher = 0x00005013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> fields.imm);
     }
@@ -438,7 +438,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0xfc00707f,
     .instruction_matcher = 0x40005013,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> fields.imm);
     }
@@ -448,7 +448,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00000033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + cpu.GetReg(fields.rs2));
     }
@@ -458,7 +458,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x40000033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) - cpu.GetReg(fields.rs2));
     }
@@ -468,7 +468,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00001033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) << cpu.GetReg(fields.rs2));
     }
@@ -478,7 +478,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00002033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) < cpu.GetReg(fields.rs2));
     }
@@ -488,7 +488,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00003033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) < cpu.GetReg(fields.rs2));
     }
@@ -498,7 +498,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00004033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) ^ cpu.GetReg(fields.rs2));
     }
@@ -508,7 +508,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00005033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> cpu.GetReg(fields.rs2));
     }
@@ -518,7 +518,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x40005033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> cpu.GetReg(fields.rs2));
     }
@@ -528,7 +528,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00006033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) | cpu.GetReg(fields.rs2));
     }
@@ -538,7 +538,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x00007033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) & cpu.GetReg(fields.rs2));
     }
@@ -548,7 +548,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0xffffffff,
     .instruction_matcher = 0x0000000f,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
     }
   },
   {
@@ -556,7 +556,7 @@ const static Instruction instructions[] = {
     .format = 'I',
   .mask_field = 0xffffffff,
   .instruction_matcher = 0x00000073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       switch(cpu.GetMode())
       {
         case PrivilegeMode::MACHINE:
@@ -579,7 +579,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0xffffffff,
     .instruction_matcher = 0x00100073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       // implement trap handler
     }
   },
@@ -593,7 +593,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00006003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -606,7 +606,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00003003,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
@@ -619,7 +619,7 @@ const static Instruction instructions[] = {
     .format = 'S',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00003023,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'S'>(instruction);
       uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data = cpu.GetReg(fields.rs2);
@@ -631,7 +631,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x0000001b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + fields.imm);
     }
@@ -641,7 +641,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0000101b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) << fields.imm);
     }
@@ -651,7 +651,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfc00707f,
     .instruction_matcher = 0x0000501b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> fields.imm);
     }
@@ -661,7 +661,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfc00707f,
     .instruction_matcher = 0x4000501b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> fields.imm);
     }
@@ -671,7 +671,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0000003b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + cpu.GetReg(fields.rs2));
     }
@@ -681,7 +681,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x4000003b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) - cpu.GetReg(fields.rs2));
     }
@@ -691,7 +691,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0000103b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) << cpu.GetReg(fields.rs2));
     }
@@ -701,7 +701,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0000503b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> cpu.GetReg(fields.rs2));
     }
@@ -711,7 +711,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x4000503b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) >> cpu.GetReg(fields.rs2));
     }
@@ -725,7 +725,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000007f,
     .instruction_matcher = 0x0000000f,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       // not implemented
     }
   },
@@ -738,7 +738,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00001073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint32_t csr = cpu.GetCsr(fields.imm);
       cpu.SetCsr(fields.imm, cpu.GetReg(fields.rs1));
@@ -750,7 +750,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00002073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint32_t csr = cpu.GetCsr(fields.imm);
       cpu.SetCsr(fields.imm, csr | cpu.GetReg(fields.rs1));
@@ -762,7 +762,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00003073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint32_t csr = cpu.GetCsr(fields.imm);
       cpu.SetCsr(fields.imm, csr & ~cpu.GetReg(fields.rs1));
@@ -774,7 +774,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00005073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint32_t csr = cpu.GetCsr(fields.imm);
       cpu.SetCsr(fields.imm, fields.rs1);
@@ -786,7 +786,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00006073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint32_t csr = cpu.GetCsr(fields.imm);
       cpu.SetCsr(fields.imm, csr | fields.rs1);
@@ -798,7 +798,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0x0000707f,
     .instruction_matcher = 0x00007073,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       uint32_t csr = cpu.GetCsr(fields.imm);
       cpu.SetCsr(fields.imm, csr & ~fields.rs1);
@@ -814,7 +814,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02000033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) * cpu.GetReg(fields.rs2));
     }
@@ -824,7 +824,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02001033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) * cpu.GetReg(fields.rs2));
     }
@@ -834,7 +834,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02002033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) * cpu.GetReg(fields.rs2));
     }
@@ -844,7 +844,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02003033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) * cpu.GetReg(fields.rs2));
     }
@@ -854,7 +854,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02004033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       int64_t dividend = static_cast<int64_t>(cpu.GetReg(fields.rs1));
       int64_t divisor = static_cast<int64_t>(cpu.GetReg(fields.rs2));
@@ -876,7 +876,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02005033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       uint64_t dividend = cpu.GetReg(fields.rs1);
       uint64_t divisor = cpu.GetReg(fields.rs2);
@@ -893,7 +893,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02006033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       int64_t dividend = static_cast<int64_t>(cpu.GetReg(fields.rs1));
       int64_t divisor = static_cast<int64_t>(cpu.GetReg(fields.rs2));
@@ -915,7 +915,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x02007033,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       uint64_t dividend = cpu.GetReg(fields.rs1);
       uint64_t divisor = cpu.GetReg(fields.rs2);
@@ -936,7 +936,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0200003b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) * cpu.GetReg(fields.rs2));
     }
@@ -946,7 +946,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0200403b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       int32_t dividend = static_cast<int32_t>(cpu.GetReg(fields.rs1));
       int32_t divisor = static_cast<int32_t>(cpu.GetReg(fields.rs2));
@@ -968,7 +968,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0200503b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       uint32_t dividend = static_cast<uint32_t>(cpu.GetReg(fields.rs1));
       uint32_t divisor = static_cast<uint32_t>(cpu.GetReg(fields.rs2));
@@ -985,7 +985,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0200603b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       int32_t dividend = static_cast<int32_t>(cpu.GetReg(fields.rs1));
       int32_t divisor = static_cast<int32_t>(cpu.GetReg(fields.rs2));
@@ -1007,7 +1007,7 @@ const static Instruction instructions[] = {
     .format = 'R',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0200703b,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'R'>(instruction);
       uint32_t dividend = static_cast<uint32_t>(cpu.GetReg(fields.rs1));
       uint32_t divisor = static_cast<uint32_t>(cpu.GetReg(fields.rs2));
@@ -1030,7 +1030,7 @@ const static Instruction instructions[] = {
     .format = 'I',
     .mask_field = 0xfe00707f,
     .instruction_matcher = 0x0200002f,
-    .execute = [](const uint32_t instruction, CPU& cpu) {
+    .execute = [](const uint32_t instruction, T& cpu) {
       InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1));
     }
@@ -1039,9 +1039,10 @@ const static Instruction instructions[] = {
   // ----------------------------------------
 };
 
-const Instruction& CPU::Decode(uint32_t instruction)
+template<typename T_MMU>
+const Instruction<CPU<T_MMU>>& CPU<T_MMU>::Decode(uint32_t instruction)
 {
-  for(const auto& i : instructions)
+  for(const auto& i : instruction_list<CPU<T_MMU>>)
   {
     if ((instruction & i.mask_field) == i.instruction_matcher)
     {
@@ -1051,10 +1052,11 @@ const Instruction& CPU::Decode(uint32_t instruction)
   throw std::runtime_error("Instruction not supported");
 }
 
-int CPU::Execute()
+template<typename T_MMU>
+int CPU<T_MMU>::Execute()
 {
   const uint32_t instruction = Fetch();
-  const Instruction& inst = Decode(instruction);
+  const Instruction<CPU<T_MMU>>& inst = Decode(instruction);
   try
   {
     inst.execute(instruction, *this);
@@ -1068,7 +1070,8 @@ int CPU::Execute()
   return 0;
 }
 
-uint32_t CPU::Fetch()
+template<typename T_MMU>
+uint32_t CPU<T_MMU>::Fetch()
 {
   uint64_t inst;
   Load(pc, 4, inst);
@@ -1076,7 +1079,8 @@ uint32_t CPU::Fetch()
   return inst;
 }
 
-void CPU::Run()
+template<typename T_MMU>
+void CPU<T_MMU>::Run()
 {
   while(true)
   {
@@ -1084,7 +1088,8 @@ void CPU::Run()
   }
 }
 
-int CPU::Step()
+template<typename T_MMU>
+int CPU<T_MMU>::Step()
 {
   try
   {
@@ -1098,7 +1103,8 @@ int CPU::Step()
   return 0;
 }
 
-void CPU::UpdatePagingMode(uint64_t satp_val)
+template<typename T_MMU>
+void CPU<T_MMU>::UpdatePagingMode(uint64_t satp_val)
 {
   if(xlen == 64)
   {
@@ -1114,7 +1120,8 @@ void CPU::UpdatePagingMode(uint64_t satp_val)
 // DEBUG FUNCTIONS
 // TODO (jrola): move to tests directory
 
-int CPU::RunInstruction(uint32_t instruction)
+template<typename T_MMU>
+int CPU<T_MMU>::RunInstruction(uint32_t instruction)
 {
   Instruction inst = Decode(instruction);
   CPU::DumpInstruction(inst);
@@ -1125,7 +1132,10 @@ int CPU::RunInstruction(uint32_t instruction)
   return 0;
 }
 
-void CPU::DumpRegs()
+template class CPU<MMU<RAM<KERNBASE, MEMORY_SIZE>>>;
+
+template<typename T_MMU>
+void CPU<T_MMU>::DumpRegs()
 {
   std::cout << "--- REGISTERS ---" << std::endl;
   for (int i = 0; i < N_REG; i++)
@@ -1134,7 +1144,8 @@ void CPU::DumpRegs()
   }
 }
 
-void CPU::DumpCsrs()
+template<typename T_MMU>
+void CPU<T_MMU>::DumpCsrs()
 {
   for (int i = 0; i < N_CSR; i++)
   {
@@ -1142,7 +1153,8 @@ void CPU::DumpCsrs()
   }
 }
 
-void CPU::DumpInstruction(const Instruction& inst)
+template<typename T_MMU>
+void CPU<T_MMU>::DumpInstruction(const Instruction<CPU<T_MMU>>& inst)
 {
   std::cout << "--- INSTRUCTION ---" << std::endl;
   std::cout << "name: " << inst.name << std::endl;
@@ -1152,7 +1164,8 @@ void CPU::DumpInstruction(const Instruction& inst)
   std::cout << "pc: " << std::hex << pc << std::endl;
 }
 
-void CPU::DumpInstructionFields(InstructionFields inst)
+template<typename T_MMU>
+void CPU<T_MMU>::DumpInstructionFields(InstructionFields inst)
 {
   std::cout << "--- INSTRUCTION FIELDS ---" << std::endl;
   std::cout << "opcode: " << std::hex << inst.opcode << std::endl;

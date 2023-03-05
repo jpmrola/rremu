@@ -1,45 +1,24 @@
 #include <mmu.h>
 #include <iostream>
 
-void MMU::Load(uint64_t addr, int size, uint64_t& data)
+template<Device... Devices>
+void MMU<Devices...>::Load(uint64_t addr, int size, uint64_t& data)
 {
   try
   {
     uint64_t physical_addr = Translate(addr);
-    if(physical_addr >= ram.get_base_addr() && physical_addr < (ram.get_base_addr() + ram.get_size()))
+    bool device_found = false;
+    std::apply(
+    [&](auto&... devices)
     {
-      ram.Load(physical_addr, size, data);
+      device_found = ((devices.InRange(physical_addr) ? devices.Load(physical_addr, size, data), true : false) || ...);
+    },
+    devices);
+    if(device_found)
+    {
       return;
     }
-    else
-    {
-      if(physical_addr >= uart.get_base_addr() && physical_addr < (uart.get_base_addr() + uart.get_size()))
-      {
-        uart.Load(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
-      {
-        virtio.Load(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= clint.get_base_addr() && physical_addr < (clint.get_base_addr() + clint.get_size()))
-      {
-        clint.Load(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= plic.get_base_addr() && physical_addr < (plic.get_base_addr() + plic.get_size()))
-      {
-        plic.Load(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
-      {
-        virtio.Load(physical_addr, size, data);
-        return;
-      }
     throw std::runtime_error("MMU Load: No device found");
-    }
   }
   catch(const std::exception& e)
   {
@@ -49,43 +28,20 @@ void MMU::Load(uint64_t addr, int size, uint64_t& data)
   }
 }
 
-void MMU::Store(uint64_t addr, int size, uint64_t data)
+template<Device... Devices>
+void MMU<Devices...>::Store(uint64_t addr, int size, uint64_t data)
 {
   try
   {
     uint64_t physical_addr = Translate(addr);
-    if(physical_addr >= ram.get_base_addr() && physical_addr < (ram.get_base_addr() + ram.get_size()))
+    bool device_found = false;
+    std::apply([&](auto&... devices)
     {
-      ram.Store(physical_addr, size, data);
+      device_found = ((devices.InRange(physical_addr) ? devices.Store(physical_addr, size, data), true : false) || ...);
+    }, devices);
+    if(device_found)
+    {
       return;
-    }
-    else
-    {
-      if(physical_addr >= uart.get_base_addr() && physical_addr < (uart.get_base_addr() + uart.get_size()))
-      {
-        uart.Store(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
-      {
-        virtio.Store(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= clint.get_base_addr() && physical_addr < (clint.get_base_addr() + clint.get_size()))
-      {
-        clint.Store(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= plic.get_base_addr() && physical_addr < (plic.get_base_addr() + plic.get_size()))
-      {
-        plic.Store(physical_addr, size, data);
-        return;
-      }
-      else if(physical_addr >= virtio.get_base_addr() && physical_addr < (virtio.get_base_addr() + virtio.get_size()))
-      {
-        virtio.Store(physical_addr, size, data);
-        return;
-      }
     }
     throw std::runtime_error("MMU Store: No device found");
   }
@@ -96,7 +52,8 @@ void MMU::Store(uint64_t addr, int size, uint64_t data)
   }
 }
 
-Sv39PageTableEntry MMU::ParsePageTableEntry(uint64_t pte)
+template<Device... Devices>
+Sv39PageTableEntry MMU<Devices...>::ParsePageTableEntry(uint64_t pte)
 {
   Sv39PageTableEntry entry;
   entry.v = (pte >> 0) & 0x1;
@@ -116,7 +73,8 @@ Sv39PageTableEntry MMU::ParsePageTableEntry(uint64_t pte)
 }
 
 // Implements the Virtual Address Translation Algorithm from RISC-V Privileged ISA Manual
-uint64_t MMU::Translate(uint64_t virtual_addr)
+template<Device... Devices>
+uint64_t MMU<Devices...>::Translate(uint64_t virtual_addr)
 {
   if(paging_mode == Bare)
   {
@@ -186,3 +144,5 @@ uint64_t MMU::Translate(uint64_t virtual_addr)
       break;
   }
 }
+
+template class MMU<RAM<KERNBASE, MEMORY_SIZE>>;
