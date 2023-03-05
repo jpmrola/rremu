@@ -1,10 +1,8 @@
 #include "cpu.h"
 #include <iostream>
 
-// TODO(jrola): MISSING EXTENSIONS to G (M, A, F, D, Zicsr, Zifencei)
+// TODO(jrola): MISSING EXTENSIONS to G (F, D, Zicsr, Zifencei)
 //              MISSING INSTRUCTIONS IN RV32I: FENCE, ECALL, EBREAK
-//              MISSING INSTRUCTIONS IN RV32A: LR.W, SC.W, AMOSWAP.W, AMOADD.W, AMOXOR.W, AMOAND.W, AMOOR.W, AMOMIN.W, AMOMAX.W, AMOMINU.W, AMOMAXU.W
-//              MISSING INSTRUCTIONS IN RV64A: LR.D, SC.D, AMOSWAP.D, AMOADD.D, AMOXOR.D, AMOAND.D, AMOOR.D, AMOMIN.D, AMOMAX.D, AMOMINU.D, AMOMAXU.D
 
 // instruction mask helpers
 
@@ -1027,16 +1025,267 @@ const static Instruction instructions[] = {
   //                        AMOMIN.W, AMOMAX.W, AMOMINU.W, AMOMAXU.W
   {
     .name = "LR.W",
-    .format = 'I',
-    .mask_field = 0xfe00707f,
-    .instruction_matcher = 0x0200002f,
+    .format = 'R',
+    .mask_field = 0xf9f0707f,
+    .instruction_matcher = 0x1000202f,
     .execute = [](const uint32_t instruction, CPU& cpu) {
-      InstructionFields fields = parse_instruction<'I'>(instruction);
-      cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1));
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data;
+      cpu.Load(fields.rs1, 4, data);
+      cpu.SetReg(fields.rd, data);
+      // TODO(jrola): reservation set
     }
-  }
+  },
+  {
+    .name = "SC.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x1800202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs2);
+      cpu.Store(fields.rs1, 4, data);
+      cpu.SetReg(fields.rd, 0);
+      // TODO(jrola): reservation set
+    }
+  },
+  {
+    .name = "AMOSWAP.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x0800202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), cpu.GetReg(fields.rs2));
+      cpu.SetReg(fields.rd, data);
+    }
+  },
+  {
+    .name = "AMOADD.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x0000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), data + cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOXOR.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x2000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), data ^ cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOAND.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x6000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), data & cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOOR.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x4000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), data | cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOMIN.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x8000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::min(data, cpu.GetReg(fields.rs2)));
+    }
+  },
+  {
+    .name = "AMOMAX.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0xa000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::max(data, cpu.GetReg(fields.rs2)));
+    }
+  },
+  {
+    .name = "AMOMINU.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0xc000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::min(data, cpu.GetReg(fields.rs2)));
+    }
+  },
+  {
+    .name = "AMOMAXU.W",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0xe000202f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::max(data, cpu.GetReg(fields.rs2)));
+    }
+  },
   // RV32A
   // ----------------------------------------
+  // RV64A
+  // INSTRUCTIONS IN RV64A: LR.D, SC.D, AMOSWAP.D, AMOADD.D,
+  //                        AMOXOR.D, AMOAND.D,
+  {
+    .name = "LR.D",
+    .format = 'R',
+    .mask_field = 0xf9f0707f,
+    .instruction_matcher = 0x1000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data;
+      cpu.Load(fields.rs1, 8, data);
+      cpu.SetReg(fields.rd, data);
+      // TODO(jrola): reservation set
+    }
+  },
+  {
+    .name = "SC.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x1800302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs2);
+      cpu.Store(fields.rs1, 8, data);
+      cpu.SetReg(fields.rd, 0);
+      // TODO(jrola): reservation set
+    }
+  },
+  {
+    .name = "AMOSWAP.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x0800302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(fields.rd, data);
+      cpu.SetReg(fields.rs1, cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOADD.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x0000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(fields.rd, data);
+      cpu.SetReg(fields.rs1, data + cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOXOR.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x2000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(fields.rd, data);
+      cpu.SetReg(fields.rs1, data ^ cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOAND.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x6000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(fields.rd, data);
+      cpu.SetReg(fields.rs1, data & cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOOR.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x4000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(fields.rd, data);
+      cpu.SetReg(fields.rs1, data | cpu.GetReg(fields.rs2));
+    }
+  },
+  {
+    .name = "AMOMIN.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0x8000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::min(data, cpu.GetReg(fields.rs2)));
+    }
+  },
+  {
+    .name = "AMOMAX.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0xa000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::max(data, cpu.GetReg(fields.rs2)));
+    }
+  },
+  {
+    .name = "AMOMINU.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0xc000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::min(data, cpu.GetReg(fields.rs2)));
+    }
+  },
+  {
+    .name = "AMOMAXU.D",
+    .format = 'R',
+    .mask_field = 0xf800707f,
+    .instruction_matcher = 0xe000302f,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      InstructionFields fields = parse_instruction<'R'>(instruction);
+      uint64_t data = cpu.GetReg(fields.rs1);
+      cpu.SetReg(cpu.GetReg(fields.rs1), std::max(data, cpu.GetReg(fields.rs2)));
+    }
+  }
+  //RV64A
+  // ----------------------------
 };
 
 const Instruction& CPU::Decode(uint32_t instruction)
