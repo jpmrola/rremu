@@ -70,11 +70,17 @@ class CPU
 {
   public:
 
-    CPU(const std::shared_ptr<std::vector<uint8_t>> binary) : mmu(MMU(binary))
-    {
-      priv_mode = PrivilegeMode::MACHINE;
-      pc = KERNBASE;
-    }
+    CPU(const std::shared_ptr<std::vector<uint8_t>> binary) :
+    pc(KERNBASE),
+    priv_mode(PrivilegeMode::MACHINE),
+    mmu(MMU(binary))
+    {}
+
+    CPU(const std::shared_ptr<std::vector<uint8_t>> binary, const uint64_t entry_point) :
+    pc(entry_point),
+    priv_mode(PrivilegeMode::MACHINE),
+    mmu(MMU(binary))
+    {}
 
     const Instruction& Decode(uint32_t instruction);
     int Execute();
@@ -119,7 +125,7 @@ class CPU
     std::array<uint64_t, N_REG> regs {0};
     std::array<uint64_t, N_CSR> csrs {0};
     PrivilegeMode priv_mode;
-    const uint64_t& reg_zero = regs[0];
+    uint64_t& reg_zero = regs[0];
     MMU mmu;
 };
 

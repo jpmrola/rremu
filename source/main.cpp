@@ -60,12 +60,11 @@ int main(int argc, char** argv)
     return -1;
   }
 
-  auto cpu = std::make_unique<CPU>(binary);
+  auto cpu = std::make_unique<CPU>(binary, entry_point);
   if(cpu == nullptr)
   {
     return -1;
   }
-  cpu->SetPc(entry_point);
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
 
@@ -78,6 +77,7 @@ int main(int argc, char** argv)
     end = std::chrono::system_clock::now();
     std::cin.get();
     std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
+    std::cout << "PC: " << std::hex << cpu->GetPc() << std::endl;
   }
 
   return 0;

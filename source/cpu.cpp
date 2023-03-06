@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include <iostream>
+#include <map>
 
 // TODO(jrola): MISSING EXTENSIONS to G (F, D, Zicsr, Zifencei)
 //              MISSING INSTRUCTIONS IN RV32I: FENCE, ECALL, EBREAK
@@ -30,17 +31,15 @@ static constexpr uint64_t mask_and_shift(uint64_t instruction)
   return ((instruction >> start) & ((1ULL << (end - start + 1ULL)) - 1ULL)) << dest;
 }
 
-template<typename T>
-T sign_extend(uint64_t val)
-{
-  return static_cast<T>(val);
-}
+constexpr auto sign_extend_12b = [](auto imm) -> int32_t {
+  int32_t sign_extended_imm = (imm & 0x800) ? (imm | 0xfffff000) : imm;
+  return sign_extended_imm;
+};
 
-template<typename T>
-T sign_extend(uint32_t val)
-{
-  return static_cast<T>(val);
-}
+constexpr auto sign_extend_13b = [](auto imm) -> int32_t {
+  int32_t sign_extended_imm = (imm & 0x1000) ? (imm | 0xffffe000) : imm;
+  return sign_extended_imm;
+};
 
 template<char format>
 InstructionFields parse_instruction(const uint32_t instruction)
@@ -136,7 +135,7 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x00000037,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'U'>(instruction);
-      cpu.SetReg(fields.rd, fields.imm);
+      cpu.SetReg(fields.rd, static_cast<int32_t>(fields.imm));
     }
   },
   {
@@ -146,7 +145,7 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x00000017,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'U'>(instruction);
-      cpu.SetReg(fields.rd, cpu.GetPc() + fields.imm);
+      cpu.SetReg(fields.rd, cpu.GetPc() + static_cast<uint64_t>(fields.imm) - 4);
     }
   },
   {
@@ -157,7 +156,7 @@ const static Instruction instructions[] = {
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'J'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc());   // PC is incremented by 4 after instruction fetch, no need to add 4
-      cpu.SetPc(cpu.GetPc() + sign_extend<int32_t>(fields.imm) - 4);  // -4 because PC is incremented by 4 after instruction fetch
+      cpu.SetPc(cpu.GetPc() + static_cast<int32_t>(fields.imm) - 4);  // -4 because PC is incremented by 4 after instruction fetch
     }
   },
   {
@@ -168,7 +167,7 @@ const static Instruction instructions[] = {
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc());   // PC is incremented by 4 after instruction fetch, no need to add 4
-      cpu.SetPc((cpu.GetReg(fields.rs1) + sign_extend<int32_t>(fields.imm)) & ~1);
+      cpu.SetPc((cpu.GetReg(fields.rs1) + static_cast<int32_t>(fields.imm)) & ~1);
     }
   },
   {
@@ -180,7 +179,7 @@ const static Instruction instructions[] = {
       const InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) == cpu.GetReg(fields.rs2))
       {
-        cpu.SetPc(cpu.GetPc() + fields.imm);
+        cpu.SetPc(cpu.GetPc() + sign_extend_13b(fields.imm) - 4);
       }
     }
   },
@@ -193,7 +192,7 @@ const static Instruction instructions[] = {
       const InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) != cpu.GetReg(fields.rs2))
       {
-        cpu.SetPc(cpu.GetPc() + fields.imm);
+        cpu.SetPc(cpu.GetPc() + sign_extend_13b(fields.imm) - 4);
       }
     }
   },
@@ -204,9 +203,9 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x00004063,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'B'>(instruction);
-      if(sign_extend<int32_t>(cpu.GetReg(fields.rs1)) < sign_extend<int32_t>(cpu.GetReg(fields.rs2)))
+      if(static_cast<int64_t>(cpu.GetReg(fields.rs1)) < static_cast<int64_t>(cpu.GetReg(fields.rs2)))
       {
-        cpu.SetPc(cpu.GetPc() + fields.imm);
+        cpu.SetPc(cpu.GetPc() + sign_extend_13b(fields.imm) - 4);
       }
     }
   },
@@ -217,9 +216,9 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x00005063,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'B'>(instruction);
-      if(sign_extend<int32_t>(cpu.GetReg(fields.rs1)) >= sign_extend<int32_t>(cpu.GetReg(fields.rs2)))
+      if(static_cast<int64_t>(cpu.GetReg(fields.rs1)) >= static_cast<int64_t>(cpu.GetReg(fields.rs2)))
       {
-        cpu.SetPc(cpu.GetPc() + fields.imm);
+        cpu.SetPc(cpu.GetPc() + sign_extend_13b(fields.imm) - 4);
       }
     }
   },
@@ -232,7 +231,7 @@ const static Instruction instructions[] = {
       const InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) < cpu.GetReg(fields.rs2))
       {
-        cpu.SetPc(cpu.GetPc() + fields.imm);
+        cpu.SetPc(cpu.GetPc() + sign_extend_13b(fields.imm) - 4);
       }
     }
   },
@@ -245,7 +244,7 @@ const static Instruction instructions[] = {
       const InstructionFields fields = parse_instruction<'B'>(instruction);
       if(cpu.GetReg(fields.rs1) >= cpu.GetReg(fields.rs2))
       {
-        cpu.SetPc(cpu.GetPc() + fields.imm);
+        cpu.SetPc(cpu.GetPc() + sign_extend_13b(fields.imm) - 4);
       }
     }
   },
@@ -259,7 +258,7 @@ const static Instruction instructions[] = {
       const uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
       cpu.Load(addr, 1, data);
-      cpu.SetReg(fields.rd, sign_extend<int8_t>(data));
+      cpu.SetReg(fields.rd, static_cast<int8_t>(data));
     }
   },
   {
@@ -272,7 +271,7 @@ const static Instruction instructions[] = {
       const uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
       cpu.Load(addr, 2, data);
-      cpu.SetReg(fields.rd, sign_extend<int16_t>(data));
+      cpu.SetReg(fields.rd, static_cast<int16_t>(data));
     }
   },
   {
@@ -285,7 +284,7 @@ const static Instruction instructions[] = {
       const uint64_t addr = cpu.GetReg(fields.rs1) + fields.imm;
       uint64_t data;
       cpu.Load(addr, 4, data);
-      cpu.SetReg(fields.rd, sign_extend<int32_t>(data));
+      cpu.SetReg(fields.rd, static_cast<int32_t>(data));
     }
   },
   {
@@ -358,7 +357,7 @@ const static Instruction instructions[] = {
   .instruction_matcher = 0x00000013,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'I'>(instruction);
-      cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + fields.imm);
+      cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + sign_extend_12b(fields.imm));
     }
   },
   {
@@ -631,7 +630,7 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x0000001b,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'I'>(instruction);
-      cpu.SetReg(fields.rd, cpu.GetReg(fields.rs1) + fields.imm);
+      cpu.SetReg(fields.rd, static_cast<int64_t>(static_cast<int32_t>(cpu.GetReg(fields.rs1) + sign_extend_12b(fields.imm))));
     }
   },
   {
@@ -1302,6 +1301,7 @@ const Instruction& CPU::Decode(uint32_t instruction)
 
 int CPU::Execute()
 {
+  reg_zero = 0;   // zero out register 0, can't be made const
   const uint32_t instruction = Fetch();
   const Instruction& inst = Decode(instruction);
   try
@@ -1363,6 +1363,42 @@ void CPU::UpdatePagingMode(uint64_t satp_val)
 // DEBUG FUNCTIONS
 // TODO (jrola): move to tests directory
 
+std::map<int, std::string> RegisterNames =
+{
+  {0, "zero"},
+  {1, "ra"},
+  {2, "sp"},
+  {3, "gp"},
+  {4, "tp"},
+  {5, "t0"},
+  {6, "t1"},
+  {7, "t2"},
+  {8, "s0"},
+  {9, "s1"},
+  {10, "a0"},
+  {11, "a1"},
+  {12, "a2"},
+  {13, "a3"},
+  {14, "a4"},
+  {15, "a5"},
+  {16, "a6"},
+  {17, "a7"},
+  {18, "s2"},
+  {19, "s3"},
+  {20, "s4"},
+  {21, "s5"},
+  {22, "s6"},
+  {23, "s7"},
+  {24, "s8"},
+  {25, "s9"},
+  {26, "s10"},
+  {27, "s11"},
+  {28, "t3"},
+  {29, "t4"},
+  {30, "t5"},
+  {31, "t6"}
+};
+
 int CPU::RunInstruction(uint32_t instruction)
 {
   Instruction inst = Decode(instruction);
@@ -1379,7 +1415,7 @@ void CPU::DumpRegs()
   std::cout << "--- REGISTERS ---" << std::endl;
   for (int i = 0; i < N_REG; i++)
   {
-    std::cout << "x" << i << ": " << std::hex << regs[i] << std::endl;
+    std::cout << RegisterNames[i] << ": " << std::hex << regs[i] << std::endl;
   }
 }
 
