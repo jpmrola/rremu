@@ -3,7 +3,7 @@
 CMAKE_OPTS=""
 RUN_TESTS=0
 
-while getopts "nrtd" opt; do
+while getopts "nrtd:" opt; do
   case $opt in
     n)
       # fresh build
@@ -22,8 +22,23 @@ while getopts "nrtd" opt; do
       ;;
     d)
       # debug build
-      DEBUG_STR="-DCMAKE_BUILD_TYPE=Debug"
-      CMAKE_OPTS="$CMAKE_OPTS $DEBUG_STR"
+      if [ "$OPTARG" = "none" ]; then
+        DEBUG_STR="-DCMAKE_BUILD_TYPE=Debug -DSANITIZER="
+        CMAKE_OPTS="$CMAKE_OPTS $DEBUG_STR"
+        continue
+      elif [ "$OPTARG" = "address" ]; then
+        DEBUG_STR="-DCMAKE_BUILD_TYPE=Debug -DSANITIZER=address"
+        CMAKE_OPTS="$CMAKE_OPTS $DEBUG_STR"
+        continue
+      elif [ "$OPTARG" = "leak" ]; then
+        DEBUG_STR="-DCMAKE_BUILD_TYPE=Debug -DSANITIZER=leak"
+        CMAKE_OPTS="$CMAKE_OPTS $DEBUG_STR"
+        continue
+      elif [ "$OPTARG" = "undefined" ]; then
+        DEBUG_STR="-DCMAKE_BUILD_TYPE=Debug -DSANITIZER=undefined"
+        CMAKE_OPTS="$CMAKE_OPTS $DEBUG_STR"
+        continue
+      fi
       ;;
     \?)
       echo "Usage: $0 [-n] [-r] [-t] [-d]"

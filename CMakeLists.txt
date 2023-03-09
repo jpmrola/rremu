@@ -19,6 +19,14 @@ set(CMAKE_BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
 
 set(CMAKE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 
+if(SANITIZER STREQUAL "address")
+    set(SANITIZER "-fsanitize=address -fno-omit-frame-pointer")
+elseif(SANITIZER STREQUAL "undefined")
+    set(SANITIZER "-fsanitize=undefined")
+elseif(SANITIZER STREQUAL "leak")
+    set(SANITIZER "-fsanitize=leak")
+endif()
+
 # --- Set up clang-tidy ---
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
@@ -94,9 +102,7 @@ endif()
 # --- Debug ---
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
-
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZER} -g3")
 endif()
 
 # --- Release ---
