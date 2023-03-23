@@ -7,24 +7,7 @@
 #include <string>
 #include "mmu.h"
 #include "config.h"
-
-enum trap_value : uint8_t
-{
-  InstructionAddressMisaligned = 0x0,
-  InstructionAccessFault = 0x1,
-  IllegalInstruction = 0x2,
-  Breakpoint = 0x3,
-  LoadAddressMisaligned = 0x4,
-  LoadAccessFault = 0x5,
-  StoreAMOAddressMisaligned = 0x6,
-  StoreAMOAccessFault = 0x7,
-  EnvironmentCallFromUMode = 0x8,
-  EnvironmentCallFromSMode = 0x9,
-  EnvironmentCallFromMMode = 0xB,
-  InstructionPageFault = 0xC,
-  LoadPageFault = 0xD,
-  StoreAMOPageFault = 0xF
-};
+#include "trap.h"
 
 enum CSR : uint16_t
 {
@@ -82,11 +65,12 @@ class CPU
     mmu(MMU(binary))
     {}
 
-    const Instruction& Decode(uint32_t instruction);
-    int Execute();
     uint32_t Fetch();
+    const Instruction& Decode(uint32_t instruction);
+    void Step();
     void Run();
-    int Step();
+
+    void HandleTrap(trap_value tval);
 
     void UpdatePagingMode(uint64_t satp);
 

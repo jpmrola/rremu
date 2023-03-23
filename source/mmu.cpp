@@ -1,98 +1,82 @@
 #include <mmu.h>
 #include <iostream>
+#include "trap.h"
 
 void MMU::Load(uint64_t addr, int size, uint64_t& data)
 {
-  try
+  uint64_t physical_addr = Translate(addr);
+  if(ram.IsValidAddr(physical_addr))
   {
-    uint64_t physical_addr = Translate(addr);
-    if(ram.IsValidAddr(physical_addr))
+    ram.Load(physical_addr, size, data);
+    return;
+  }
+  else
+  {
+    if(uart.IsValidAddr(physical_addr))
     {
-      ram.Load(physical_addr, size, data);
+      uart.Load(physical_addr, size, data);
       return;
     }
-    else
+    else if(virtio.IsValidAddr(physical_addr))
     {
-      if(uart.IsValidAddr(physical_addr))
-      {
-        uart.Load(physical_addr, size, data);
-        return;
-      }
-      else if(virtio.IsValidAddr(physical_addr))
-      {
-        virtio.Load(physical_addr, size, data);
-        return;
-      }
-      else if(clint.IsValidAddr(physical_addr))
-      {
-        clint.Load(physical_addr, size, data);
-        return;
-      }
-      else if(plic.IsValidAddr(physical_addr))
-      {
-        plic.Load(physical_addr, size, data);
-        return;
-      }
-      else if(virtio.IsValidAddr(physical_addr))
-      {
-        virtio.Load(physical_addr, size, data);
-        return;
-      }
-    throw std::runtime_error("MMU Load: No device found");
+      virtio.Load(physical_addr, size, data);
+      return;
     }
-  }
-  catch(const std::exception& e)
-  {
-    data = 0;
-    std::cerr << "Caught exception in MMU Load: " << e.what() << '\n';
-    throw std::runtime_error("Failed to Load from mmu");
+    else if(clint.IsValidAddr(physical_addr))
+    {
+      clint.Load(physical_addr, size, data);
+      return;
+    }
+    else if(plic.IsValidAddr(physical_addr))
+    {
+      plic.Load(physical_addr, size, data);
+      return;
+    }
+    else if(virtio.IsValidAddr(physical_addr))
+    {
+      virtio.Load(physical_addr, size, data);
+      return;
+    }
+  throw CPUTrapException(trap_value::LoadAccessFault);
   }
 }
 
 void MMU::Store(uint64_t addr, int size, uint64_t data)
 {
-  try
+  uint64_t physical_addr = Translate(addr);
+  if(ram.IsValidAddr(physical_addr))
   {
-    uint64_t physical_addr = Translate(addr);
-    if(ram.IsValidAddr(physical_addr))
+    ram.Store(physical_addr, size, data);
+    return;
+  }
+  else
+  {
+    if(uart.IsValidAddr(physical_addr))
     {
-      ram.Store(physical_addr, size, data);
+      uart.Store(physical_addr, size, data);
       return;
     }
-    else
+    else if(virtio.IsValidAddr(physical_addr))
     {
-      if(uart.IsValidAddr(physical_addr))
-      {
-        uart.Store(physical_addr, size, data);
-        return;
-      }
-      else if(virtio.IsValidAddr(physical_addr))
-      {
-        virtio.Store(physical_addr, size, data);
-        return;
-      }
-      else if(clint.IsValidAddr(physical_addr))
-      {
-        clint.Store(physical_addr, size, data);
-        return;
-      }
-      else if(plic.IsValidAddr(physical_addr))
-      {
-        plic.Store(physical_addr, size, data);
-        return;
-      }
-      else if(virtio.IsValidAddr(physical_addr))
-      {
-        virtio.Store(physical_addr, size, data);
-        return;
-      }
+      virtio.Store(physical_addr, size, data);
+      return;
     }
-    throw std::runtime_error("MMU Store: No device found");
-  }
-  catch(const std::exception& e)
-  {
-    std::cerr << "Caught exception in MMU Store: " << e.what() << '\n';
-    throw std::runtime_error("Failed to Store to mmu");
+    else if(clint.IsValidAddr(physical_addr))
+    {
+      clint.Store(physical_addr, size, data);
+      return;
+    }
+    else if(plic.IsValidAddr(physical_addr))
+    {
+      plic.Store(physical_addr, size, data);
+      return;
+    }
+    else if(virtio.IsValidAddr(physical_addr))
+    {
+      virtio.Store(physical_addr, size, data);
+      return;
+    }
+  throw CPUTrapException(trap_value::StoreAMOAccessFault);
   }
 }
 
@@ -124,14 +108,14 @@ uint64_t MMU::Translate(uint64_t virtual_addr)
   }
   else if(paging_mode != Sv39)
   {
-    throw std::runtime_error("Paging mode not supported");
+    throw CPUTrapException(trap_value::InstructionPageFault);
   }
 
   switch(privilege_mode)
   {
     case MACHINE: // TODO(jrola): implement machine mode memory protection
-    case USER:
     case SUPERVISOR:
+    case USER:
     {
       std::array<uint64_t, 3> vpn = {
         (virtual_addr >> 12) & 0x1FF,
@@ -152,7 +136,7 @@ uint64_t MMU::Translate(uint64_t virtual_addr)
         pte = ParsePageTableEntry(pte_raw);
         if(pte.v == 0 || (pte.r == 0 && pte.w == 1))
         {
-          throw std::runtime_error("Page Fault Exception");
+          throw CPUTrapException(trap_value::InstructionPageFault);
         }
         if(pte.r == 1 || pte.x == 1) // leaf page TODO(jrola): implement memory protection
         {
@@ -160,7 +144,7 @@ uint64_t MMU::Translate(uint64_t virtual_addr)
         }
         else if(i == 0) // no leaf page found
         {
-          throw std::runtime_error("Page Fault Exception");
+          throw CPUTrapException(trap_value::InstructionPageFault);
         }
         a = (pte.ppn2 << 30) | (pte.ppn1 << 21) | (pte.ppn0 << 12) * page_size;
       }
@@ -176,13 +160,13 @@ uint64_t MMU::Translate(uint64_t virtual_addr)
           return pte.ppn2 << 30 | (vpn[1] << 21) | (vpn[0] << 12) | offset;
           break;
         default:
-          throw std::runtime_error("Page Fault Exception");
+          throw CPUTrapException(trap_value::InstructionPageFault);
           break;
       }
     }
       break;
     default:
-      throw std::runtime_error("Privilege mode not supported");
+      throw CPUTrapException(trap_value::InstructionPageFault);
       break;
   }
 }

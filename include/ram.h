@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstring>
 #include "base_device.h"
+#include "trap.h"
 
 template <uint64_t base_addr_mem, uint64_t size_mem>
 class RAM : public BaseDevice
@@ -50,7 +51,7 @@ void RAM<base_addr_mem, size_mem>::Load(uint64_t addr, int size, uint64_t& data)
     }
     default:
     {
-      throw std::runtime_error("Invalid size");
+      throw CPUTrapException(trap_value::LoadAccessFault);
       break;
     }
   }
@@ -72,7 +73,7 @@ void RAM<base_addr_mem, size_mem>::Store(uint64_t addr, int size, uint64_t data)
     }
     default:
     {
-      throw std::runtime_error("Invalid size");
+      throw CPUTrapException(trap_value::StoreAMOAccessFault);
       break;
     }
   }

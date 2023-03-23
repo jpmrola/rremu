@@ -67,16 +67,30 @@ int main(int argc, char** argv)
   }
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
+  auto except = false;
 
   // Step mode
   std::cout << "PC: " << std::hex << cpu->GetPc() << std::endl;
   while(true)
   {
+    except = false;
     start = std::chrono::system_clock::now();
-    cpu->Step();
-    end = std::chrono::system_clock::now();
+    try
+    {
+      cpu->Step();
+    }
+    catch(const CPUTrapException& e)
+    {
+      end = std::chrono::system_clock::now();
+      std::cout << "Trap: " << e.what() << std::endl;
+      except = true;
+    }
+    if(!except)
+    {
+      end = std::chrono::system_clock::now();
+    }
     std::cin.get();
-    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
+    std::cout << std::dec << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " us" << std::endl;
     std::cout << "PC: " << std::hex << cpu->GetPc() << std::endl;
   }
 

@@ -44,7 +44,7 @@ constexpr auto sign_extend_13b = [](auto imm) -> int32_t {
 template<char format>
 InstructionFields parse_instruction(const uint32_t instruction)
 {
-  throw std::runtime_error("Invalid instruction format");
+  throw CPUTrapException(trap_value::IllegalInstruction);
 }
 
 template<>
@@ -557,16 +557,13 @@ const static Instruction instructions[] = {
       switch(cpu.GetMode())
       {
         case PrivilegeMode::MACHINE:
-          // implement trap handler
-          break;
-        case PrivilegeMode::RESERVED:
-          // implement trap handler
+          throw CPUTrapException(trap_value::EnvironmentCallFromMMode);
           break;
         case PrivilegeMode::SUPERVISOR:
-          // implement trap handler
+          throw CPUTrapException(trap_value::EnvironmentCallFromSMode);
           break;
         case PrivilegeMode::USER:
-          // implement trap handler
+          throw CPUTrapException(trap_value::EnvironmentCallFromUMode);
           break;
       }
     }
@@ -1296,25 +1293,7 @@ const Instruction& CPU::Decode(uint32_t instruction)
       return i;
     }
   }
-  throw std::runtime_error("Instruction not supported");
-}
-
-int CPU::Execute()
-{
-  reg_zero = 0;   // zero out register 0, can't be made const
-  const uint32_t instruction = Fetch();
-  const Instruction& inst = Decode(instruction);
-  try
-  {
-    inst.execute(instruction, *this);
-  }
-  catch (const std::runtime_error& e)
-  {
-    std::cerr << e.what() << '\n';
-    throw e;
-    return -1;
-  }
-  return 0;
+  throw CPUTrapException(trap_value::IllegalInstruction);
 }
 
 uint32_t CPU::Fetch()
@@ -1325,26 +1304,34 @@ uint32_t CPU::Fetch()
   return inst;
 }
 
+void CPU::Step()
+{
+  reg_zero = 0;   // zero out register 0, can't be made const
+  const uint32_t instruction = Fetch();
+  const Instruction& inst = Decode(instruction);
+  try
+  {
+    inst.execute(instruction, *this);
+  }
+  catch (const CPUTrapException& e)
+  {
+    HandleTrap(e.GetTrap());
+  }
+}
+
 void CPU::Run()
 {
   while(true)
   {
-    Step();
+    try
+    {
+      Step();
+    }
+    catch(const CPUTrapException& e)
+    {
+      std::cerr << "Unhandled trap: " << e.what() << std::endl;
+    }
   }
-}
-
-int CPU::Step()
-{
-  try
-  {
-    Execute();
-  }
-  catch(const std::runtime_error& e) // TODO(jrola): catch specific exceptions
-  {
-    std::cerr << e.what() << '\n';
-    return -1;
-  }
-  return 0;
 }
 
 void CPU::UpdatePagingMode(uint64_t satp_val)
@@ -1356,7 +1343,22 @@ void CPU::UpdatePagingMode(uint64_t satp_val)
   }
   else
   {
-    throw std::runtime_error("Unsupported XLEN");
+    throw CPUTrapException(trap_value::InstructionPageFault);
+  }
+}
+
+void CPU::HandleTrap(trap_value tval)
+{
+  switch (tval)
+  {
+  case trap_value::EnvironmentCallFromMMode:
+  case trap_value::EnvironmentCallFromSMode:
+  case trap_value::EnvironmentCallFromUMode:
+    // TODO (jrola): implement
+    break;
+  default:
+    throw CPUTrapException(tval);
+    break;
   }
 }
 

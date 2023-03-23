@@ -49,9 +49,8 @@ typedef enum
 {
   USER = 0x0,
   SUPERVISOR = 0x1,
-  RESERVED=0x2,
   MACHINE = 0x3
-  } PrivilegeMode;
+} PrivilegeMode;
 
 // Acts as the MMU and bus for the CPU
 // Connects the devices and maps them in virtual memory
