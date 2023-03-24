@@ -41,6 +41,11 @@ constexpr auto sign_extend_13b = [](auto imm) -> int32_t {
   return sign_extended_imm;
 };
 
+constexpr auto sign_extend_20b = [](auto imm) -> int32_t {
+  int32_t sign_extended_imm = (imm & 0x00080000) ? (imm | 0xfff00000) : imm;
+  return sign_extended_imm;
+};
+
 template<char format>
 InstructionFields parse_instruction(const uint32_t instruction)
 {
@@ -123,6 +128,41 @@ InstructionFields parse_instruction<'J'>(const uint32_t instruction)
 
 
 const static Instruction instructions[] = {
+  // RV32I Privileged
+  // INSTRUCTIONS IN RV32I Privileged: SRET, MRET
+  {
+    .name = "SRET",
+    .format = 'R',
+    .mask_field = 0xffffffff,
+    .instruction_matcher = 0x10200073,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      cpu.SetPc(cpu.GetCsr(sepc));
+      cpu.SetMode(((cpu.GetCsr(sstatus) >> 8) & 1) ? SUPERVISOR : USER);
+      cpu.SetCsr(sstatus, ((cpu.GetCsr(sstatus) >> 5) & 1)
+                          ? cpu.GetCsr(sstatus) | (1 << 1)
+                          : cpu.GetCsr(sstatus) & ~(1 << 1));
+      cpu.SetCsr(sstatus, cpu.GetCsr(sstatus) | (1 << 5));
+      cpu.SetCsr(sstatus, cpu.GetCsr(sstatus) & ~(1 << 8));
+    }
+  },
+  {
+    .name = "MRET",
+    .format = 'R',
+    .mask_field = 0xffffffff,
+		.instruction_matcher = 0x30200073,
+    .execute = [](const uint32_t instruction, CPU& cpu) {
+      cpu.SetPc(cpu.GetCsr(mepc));
+      uint64_t mpp = (cpu.GetCsr(mstatus) >> 11) & 3;
+      cpu.SetMode(mpp == 2 ? MACHINE : (mpp == 1 ? SUPERVISOR : USER));
+      cpu.SetCsr(mstatus, ((cpu.GetCsr(mstatus) >> 7) & 1)
+                          ? cpu.GetCsr(mstatus) | (1 << 3)
+                          : cpu.GetCsr(mstatus) & ~(1 << 3));
+      cpu.SetCsr(mstatus, cpu.GetCsr(mstatus) | (1 << 7));
+      cpu.SetCsr(mstatus, cpu.GetCsr(mstatus) & ~(3 << 11));
+    }
+  },
+  // RV32I Privileged
+  // ----------------------------------------
   // RV32I
   // INSTRUCTIONS IN RV32I: LUI, AUIPC, JAL, JALR, BEQ, BNE, BLT, BGE, BLTU, BGEU,
   //                        LB, LH, LW, LBU, LHU, SB, SH, SW,
@@ -156,7 +196,7 @@ const static Instruction instructions[] = {
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'J'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc());   // PC is incremented by 4 after instruction fetch, no need to add 4
-      cpu.SetPc(cpu.GetPc() + static_cast<int32_t>(fields.imm) - 4);  // -4 because PC is incremented by 4 after instruction fetch
+      cpu.SetPc(cpu.GetPc() + sign_extend_20b(fields.imm) - 4);  // -4 because PC is incremented by 4 after instruction fetch
     }
   },
   {
@@ -167,7 +207,7 @@ const static Instruction instructions[] = {
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'I'>(instruction);
       cpu.SetReg(fields.rd, cpu.GetPc());   // PC is incremented by 4 after instruction fetch, no need to add 4
-      cpu.SetPc((cpu.GetReg(fields.rs1) + static_cast<int32_t>(fields.imm)) & ~1);
+      cpu.SetPc((cpu.GetReg(fields.rs1) + sign_extend_12b(fields.imm)) & ~1);
     }
   },
   {
@@ -574,7 +614,7 @@ const static Instruction instructions[] = {
     .mask_field = 0xffffffff,
     .instruction_matcher = 0x00100073,
     .execute = [](const uint32_t instruction, CPU& cpu) {
-      // implement trap handler
+      // TODO(jrola): Maybe implement
     }
   },
   // RV32I
@@ -1334,7 +1374,7 @@ void CPU::Run()
   }
 }
 
-void CPU::UpdatePagingMode(uint64_t satp_val)
+void CPU::UpdatePagingMode(const uint64_t satp_val)
 {
   if(xlen == 64)
   {
@@ -1347,18 +1387,53 @@ void CPU::UpdatePagingMode(uint64_t satp_val)
   }
 }
 
-void CPU::HandleTrap(trap_value tval)
+void CPU::HandleTrap(const trap_value tval)
 {
-  switch (tval)
+  uint64_t trap_pc = pc -4;
+  PrivilegeMode trap_priv_mode = GetMode();
+  uint64_t cause = tval;
+
+  if((trap_priv_mode == SUPERVISOR || trap_priv_mode == USER) && (csrs[medeleg] >> (cause & ~interrupt_bit) != 0))
   {
-  case trap_value::EnvironmentCallFromMMode:
-  case trap_value::EnvironmentCallFromSMode:
-  case trap_value::EnvironmentCallFromUMode:
-    // TODO (jrola): implement
-    break;
-  default:
-    throw CPUTrapException(tval);
-    break;
+    SetMode(SUPERVISOR);
+    if((cause & interrupt_bit) != 0)
+    {
+      uint64_t vec = (csrs[stvec] & 1) ? (4 * cause) : 0;
+      pc = (csrs[stvec] & ~1) + vec;
+    }
+    else
+    {
+      pc = csrs[stvec] & ~1;
+    }
+    csrs[sepc] = trap_pc & ~1;
+    csrs[scause] = cause;
+    csrs[stval] = 0;
+    csrs[sstatus] = ((csrs[sstatus] >> 1) & 1)? csrs[sstatus] | (1 << 5) : csrs[sstatus] & ~(1 << 5);
+    csrs[sstatus] = csrs[sstatus] & ~(1 << 1);
+    if (trap_priv_mode == USER) {
+        csrs[sstatus] = csrs[sstatus] & ~(1 << 8);
+    } else {
+        csrs[sstatus] = csrs[sstatus] | (1 << 8);
+    }
+  }
+  else
+  {
+    priv_mode = MACHINE;
+
+    if ((cause & interrupt_bit) != 0) {
+        uint64_t vec = (csrs[mtvec] & 1) ? 4 * cause : 0;
+        pc = (csrs[mtvec] & ~1) + vec;
+    } else {
+        pc = csrs[mtvec] & ~1;
+    }
+    csrs[mepc] = trap_pc & ~1;
+    csrs[mcause] = cause;
+    csrs[mtval] = 0;
+    csrs[mstatus] =   ((csrs[mstatus] >> 3) & 1)
+                      ? csrs[mstatus] | (1 << 7)
+                      : csrs[mstatus] & ~(1 << 7);
+    csrs[mstatus] = csrs[mstatus] & ~(1 << 3);
+    csrs[mstatus] = csrs[mstatus] & ~(3 << 11);
   }
 }
 

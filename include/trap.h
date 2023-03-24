@@ -4,7 +4,10 @@
 #include <iostream>
 #include <stdexcept>
 
-enum trap_value : uint8_t
+static constexpr uint64_t interrupt_bit = 0x8000000000000000;
+// static constexpr uint32_t interrupt_bit = 0x80000000; if xlen is 32 bit TODO(jrola): implemen: implement
+
+enum trap_value : uint64_t
 {
   InstructionAddressMisaligned = 0x0,
   InstructionAccessFault = 0x1,
@@ -19,7 +22,16 @@ enum trap_value : uint8_t
   EnvironmentCallFromMMode = 0xB,
   InstructionPageFault = 0xC,
   LoadPageFault = 0xD,
-  StoreAMOPageFault = 0xF
+  StoreAMOPageFault = 0xF,
+  UserSoftwareInterrupt = interrupt_bit,
+  SupervisorSoftwareInterrupt = interrupt_bit + 1,
+  MachineSoftwareInterrupt = interrupt_bit + 3,
+  UserTimerInterrupt = interrupt_bit + 4,
+  SupervisorTimerInterrupt = interrupt_bit + 5,
+  MachineTimerInterrupt = interrupt_bit + 7,
+  UserExternalInterrupt = interrupt_bit + 8,
+  SupervisorExternalInterrupt = interrupt_bit + 9,
+  MachineExternalInterrupt = interrupt_bit + 11
 };
 
 class CPUTrapException : public std::exception
@@ -58,6 +70,24 @@ class CPUTrapException : public std::exception
           return "Load Page Fault";
         case StoreAMOPageFault:
           return "Store/AMO Page Fault";
+        case UserSoftwareInterrupt:
+          return "UserSoftwareInterrupt";
+        case SupervisorSoftwareInterrupt:
+          return "SupervisorSoftwareInterrupt";
+        case MachineSoftwareInterrupt:
+          return "MachineSoftwareInterrupt";
+        case UserTimerInterrupt:
+          return "UserTimerInterrupt";
+        case SupervisorTimerInterrupt:
+          return "SupervisorTimerInterrupt";
+        case MachineTimerInterrupt:
+          return "MachineTimerInterrupt";
+        case UserExternalInterrupt:
+          return "UserExternalInterrupt";
+        case SupervisorExternalInterrupt:
+          return "SupervisorExternalInterrupt";
+        case MachineExternalInterrupt:
+          return "MachineExternalInterrupt";
         default:
           return "Unknown Trap";
       }
