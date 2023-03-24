@@ -3,7 +3,7 @@
 #include <map>
 
 // TODO(jrola): MISSING EXTENSIONS to G (F, D, Zicsr, Zifencei)
-//              MISSING INSTRUCTIONS IN RV32I: FENCE, ECALL, EBREAK
+//              MISSING INSTRUCTIONS IN RV32I: FENCE, EBREAK
 
 // instruction mask helpers
 
