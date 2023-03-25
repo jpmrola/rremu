@@ -1440,7 +1440,7 @@ void CPU::HandleTrap(const trap_value tval)
 // DEBUG FUNCTIONS
 // TODO (jrola): move to tests directory
 
-std::map<int, std::string> RegisterNames =
+const std::map<int, std::string> RegisterNames =
 {
   {0, "zero"},
   {1, "ra"},
@@ -1492,7 +1492,7 @@ void CPU::DumpRegs()
   std::cout << "--- REGISTERS ---" << std::endl;
   for (int i = 0; i < N_REG; i++)
   {
-    std::cout << RegisterNames[i] << ": " << std::hex << regs[i] << std::endl;
+    std::cout << RegisterNames.at(i) << ": " << std::hex << regs[i] << std::endl;
   }
 }
 

@@ -40,7 +40,7 @@ int main(int argc, char** argv)
   }
   else if(option == 0)
   {
-    std::cout << "XV6 mode not implemented" << std::endl;
+    std::cout << "xv6 mode not implemented" << std::endl;
     return -1;
   }
   else if(option == 1)
