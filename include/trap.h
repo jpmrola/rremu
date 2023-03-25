@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 static constexpr uint64_t interrupt_bit = 0x8000000000000000;
-// static constexpr uint32_t interrupt_bit = 0x80000000; if xlen is 32 bit TODO(jrola): implemen: implement
+// static constexpr uint32_t interrupt_bit = 0x80000000; if xlen is 32 bit TODO(jrola): implement
 
 enum trap_value : uint64_t
 {

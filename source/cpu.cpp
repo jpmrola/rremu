@@ -1408,7 +1408,7 @@ void CPU::HandleTrap(const trap_value tval)
     csrs[sepc] = trap_pc & ~1;
     csrs[scause] = cause;
     csrs[stval] = 0;
-    csrs[sstatus] = ((csrs[sstatus] >> 1) & 1)? csrs[sstatus] | (1 << 5) : csrs[sstatus] & ~(1 << 5);
+    csrs[sstatus] = ((csrs[sstatus] >> 1) & 1) ? csrs[sstatus] | (1 << 5) : csrs[sstatus] & ~(1 << 5);
     csrs[sstatus] = csrs[sstatus] & ~(1 << 1);
     if (trap_priv_mode == USER) {
         csrs[sstatus] = csrs[sstatus] & ~(1 << 8);
