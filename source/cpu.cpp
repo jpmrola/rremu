@@ -1389,11 +1389,11 @@ void CPU::UpdatePagingMode(const uint64_t satp_val)
 
 void CPU::HandleTrap(const trap_value tval)
 {
-  uint64_t trap_pc = pc -4;
-  PrivilegeMode trap_priv_mode = GetMode();
-  uint64_t cause = tval;
+  const uint64_t trap_pc = pc -4;
+  const PrivilegeMode trap_priv_mode = GetMode();
+  const uint64_t cause = tval;
 
-  if((trap_priv_mode == SUPERVISOR || trap_priv_mode == USER) && (csrs[medeleg] >> (cause & ~interrupt_bit) != 0))
+  if((trap_priv_mode == SUPERVISOR || trap_priv_mode == USER) && (((csrs[medeleg] >> (cause & ~interrupt_bit)) & 1) != 0))
   {
     SetMode(SUPERVISOR);
     if((cause & interrupt_bit) != 0)
@@ -1421,7 +1421,7 @@ void CPU::HandleTrap(const trap_value tval)
     priv_mode = MACHINE;
 
     if ((cause & interrupt_bit) != 0) {
-        uint64_t vec = (csrs[mtvec] & 1) ? 4 * cause : 0;
+        const uint64_t vec = (csrs[mtvec] & 1) ? 4 * cause : 0;
         pc = (csrs[mtvec] & ~1) + vec;
     } else {
         pc = csrs[mtvec] & ~1;
@@ -1435,6 +1435,11 @@ void CPU::HandleTrap(const trap_value tval)
     csrs[mstatus] = csrs[mstatus] & ~(1 << 3);
     csrs[mstatus] = csrs[mstatus] & ~(3 << 11);
   }
+}
+
+void CPU::HandleInterrupt(trap_value tval)
+{
+
 }
 
 // DEBUG FUNCTIONS
