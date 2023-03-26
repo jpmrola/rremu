@@ -890,8 +890,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x02004033,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      int64_t dividend = static_cast<int64_t>(cpu.GetReg(fields.rs1));
-      int64_t divisor = static_cast<int64_t>(cpu.GetReg(fields.rs2));
+      const int64_t dividend = static_cast<int64_t>(cpu.GetReg(fields.rs1));
+      const int64_t divisor = static_cast<int64_t>(cpu.GetReg(fields.rs2));
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, -1);
@@ -912,8 +912,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x02005033,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      uint64_t dividend = cpu.GetReg(fields.rs1);
-      uint64_t divisor = cpu.GetReg(fields.rs2);
+      const uint64_t dividend = cpu.GetReg(fields.rs1);
+      const uint64_t divisor = cpu.GetReg(fields.rs2);
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, -1);
@@ -929,8 +929,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x02006033,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      int64_t dividend = static_cast<int64_t>(cpu.GetReg(fields.rs1));
-      int64_t divisor = static_cast<int64_t>(cpu.GetReg(fields.rs2));
+      const int64_t dividend = static_cast<int64_t>(cpu.GetReg(fields.rs1));
+      const int64_t divisor = static_cast<int64_t>(cpu.GetReg(fields.rs2));
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, dividend);
@@ -951,8 +951,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x02007033,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      uint64_t dividend = cpu.GetReg(fields.rs1);
-      uint64_t divisor = cpu.GetReg(fields.rs2);
+      const uint64_t dividend = cpu.GetReg(fields.rs1);
+      const uint64_t divisor = cpu.GetReg(fields.rs2);
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, dividend);
