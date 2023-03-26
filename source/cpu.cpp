@@ -982,8 +982,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x0200403b,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      int32_t dividend = static_cast<int32_t>(cpu.GetReg(fields.rs1));
-      int32_t divisor = static_cast<int32_t>(cpu.GetReg(fields.rs2));
+      const int32_t dividend = static_cast<int32_t>(cpu.GetReg(fields.rs1));
+      const int32_t divisor = static_cast<int32_t>(cpu.GetReg(fields.rs2));
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, -1);
@@ -1004,8 +1004,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x0200503b,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      uint32_t dividend = static_cast<uint32_t>(cpu.GetReg(fields.rs1));
-      uint32_t divisor = static_cast<uint32_t>(cpu.GetReg(fields.rs2));
+      const uint32_t dividend = static_cast<uint32_t>(cpu.GetReg(fields.rs1));
+      const uint32_t divisor = static_cast<uint32_t>(cpu.GetReg(fields.rs2));
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, -1);
@@ -1021,8 +1021,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x0200603b,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      int32_t dividend = static_cast<int32_t>(cpu.GetReg(fields.rs1));
-      int32_t divisor = static_cast<int32_t>(cpu.GetReg(fields.rs2));
+      const int32_t dividend = static_cast<int32_t>(cpu.GetReg(fields.rs1));
+      const int32_t divisor = static_cast<int32_t>(cpu.GetReg(fields.rs2));
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, dividend);
@@ -1043,8 +1043,8 @@ const static Instruction instructions[] = {
     .instruction_matcher = 0x0200703b,
     .execute = [](const uint32_t instruction, CPU& cpu) {
       const InstructionFields fields = parse_instruction<'R'>(instruction);
-      uint32_t dividend = static_cast<uint32_t>(cpu.GetReg(fields.rs1));
-      uint32_t divisor = static_cast<uint32_t>(cpu.GetReg(fields.rs2));
+      const uint32_t dividend = static_cast<uint32_t>(cpu.GetReg(fields.rs1));
+      const uint32_t divisor = static_cast<uint32_t>(cpu.GetReg(fields.rs2));
       if(divisor == 0)
       {
         cpu.SetReg(fields.rd, dividend);
