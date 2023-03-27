@@ -1357,6 +1357,7 @@ void CPU::Step()
   {
     HandleTrap(e.GetTrap());
   }
+  HandleInterrupts();
 }
 
 void CPU::Run()
@@ -1437,9 +1438,37 @@ void CPU::HandleTrap(const trap_value tval)
   }
 }
 
-void CPU::HandleInterrupt(trap_value tval)
+static const std::map<MIP, void (*)(CPU& cpu)> interrupt_handlers =
 {
+  {MIP::meip, [](CPU& cpu){ cpu.HandleTrap(MachineExternalInterrupt); }},
+  {MIP::msip, [](CPU& cpu){ cpu.HandleTrap(MachineSoftwareInterrupt); }},
+  {MIP::mtip, [](CPU& cpu){ cpu.HandleTrap(MachineTimerInterrupt); }},
+  {MIP::seip, [](CPU& cpu){ cpu.HandleTrap(SupervisorExternalInterrupt); }},
+  {MIP::ssip, [](CPU& cpu){ cpu.HandleTrap(SupervisorSoftwareInterrupt); }},
+  {MIP::stip, [](CPU& cpu){ cpu.HandleTrap(SupervisorTimerInterrupt); }},
+};
 
+void CPU::HandleInterrupts()
+{
+  if(GetMode() == MACHINE && ((csrs[mstatus] >> 3) & 1) == 0)
+  {
+    return;
+  }
+  if(GetMode() == SUPERVISOR && ((csrs[sstatus] >> 1) & 1) == 0)
+  {
+    return;
+  }
+
+  const uint64_t pending = csrs[mie] & csrs[mip];
+  for(const auto &handler : interrupt_handlers)
+  {
+    if(pending & handler.first)
+    {
+      handler.second(*this);
+      break;
+    }
+  }
+  return;
 }
 
 // DEBUG FUNCTIONS

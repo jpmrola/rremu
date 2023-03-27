@@ -71,7 +71,7 @@ class CPU
     void Run();
 
     void HandleTrap(trap_value tval);
-    void HandleInterrupt(trap_value tval);
+    void HandleInterrupts();
 
     void UpdatePagingMode(uint64_t satp);
 
