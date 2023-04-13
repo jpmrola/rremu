@@ -1440,12 +1440,23 @@ void CPU::HandleTrap(const trap_value tval)
 
 static const std::map<MIP, void (*)(CPU& cpu)> interrupt_handlers =
 {
-  {MIP::meip, [](CPU& cpu){ cpu.HandleTrap(MachineExternalInterrupt); }},
-  {MIP::msip, [](CPU& cpu){ cpu.HandleTrap(MachineSoftwareInterrupt); }},
-  {MIP::mtip, [](CPU& cpu){ cpu.HandleTrap(MachineTimerInterrupt); }},
-  {MIP::seip, [](CPU& cpu){ cpu.HandleTrap(SupervisorExternalInterrupt); }},
-  {MIP::ssip, [](CPU& cpu){ cpu.HandleTrap(SupervisorSoftwareInterrupt); }},
-  {MIP::stip, [](CPU& cpu){ cpu.HandleTrap(SupervisorTimerInterrupt); }},
+  {MIP::meip, [](CPU& cpu){ cpu.SetCsr(mip, cpu.GetCsr(mip) & ~MIP::meip);
+                            cpu.HandleTrap(MachineExternalInterrupt); }},
+
+  {MIP::msip, [](CPU& cpu){ cpu.SetCsr(mip, cpu.GetCsr(mip) & ~MIP::msip);
+                            cpu.HandleTrap(MachineSoftwareInterrupt); }},
+
+  {MIP::mtip, [](CPU& cpu){ cpu.SetCsr(mip, cpu.GetCsr(mip) & ~MIP::mtip);
+                            cpu.HandleTrap(MachineTimerInterrupt); }},
+
+  {MIP::seip, [](CPU& cpu){ cpu.SetCsr(mip, cpu.GetCsr(mip) & ~MIP::seip);
+                            cpu.HandleTrap(SupervisorExternalInterrupt);}},
+
+  {MIP::ssip, [](CPU& cpu){ cpu.SetCsr(mip, cpu.GetCsr(mip) & ~MIP::ssip);
+                            cpu.HandleTrap(SupervisorSoftwareInterrupt); }},
+
+  {MIP::stip, [](CPU& cpu){ cpu.SetCsr(mip, cpu.GetCsr(mip) & ~MIP::stip);
+                            cpu.HandleTrap(SupervisorTimerInterrupt); }},
 };
 
 void CPU::HandleInterrupts()
